@@ -49,9 +49,21 @@ DEIXIS_PATTERNS = [
     r"\bthe pdf\b",
     r"\baccording to the paper\b",
     r"\baccording to the document\b",
+    r"\baccording to the pdf\b",
     r"\bthe authors\b",
     r"\bwhat does the paper\b",
     r"\bwhat do the authors\b",
+    r"\buploaded pdf\b",
+    r"\buploaded document\b",
+    r"\buploaded paper\b",
+    r"\bin the uploaded pdf\b",
+    r"\bin the uploaded document\b",
+    r"\bin this pdf\b",
+    r"\bin this document\b",
+    r"\bin this paper\b",
+    r"\bthe uploaded pdf\b",
+    r"\bthe uploaded document\b",
+    r"\bthe uploaded paper\b",
 ]
 
 COMPARISON_PATTERNS = [
@@ -97,6 +109,16 @@ DOCUMENT_TOPIC_PATTERNS = [
     r"\bthe abstract\b",
     r"\bthe conclusion\b",
     r"\bthe model\b",
+    r"\bthis paper's\b",
+    r"\bthis document's\b",
+    r"\bthis pdf's\b",
+    r"\bpaper proposes\b",
+    r"\bdocument shows\b",
+    r"\bpdf describes\b",
+    r"\bauthor concludes\b",
+    r"\bauthors describe\b",
+    r"\bresearch presents\b",
+    r"\bstudy examines\b",
 ]
 
 FOLLOW_UP_PATTERNS = [

@@ -23,6 +23,9 @@ if "messages" not in st.session_state:
 if "retriever" not in st.session_state:
     st.session_state.retriever = None
 
+if "documents" not in st.session_state:
+    st.session_state.documents = []  # List of dicts: {name, hash, chunks_count}
+
 if "document_name" not in st.session_state:
     st.session_state.document_name = None
 
@@ -94,68 +97,85 @@ def render_web_sources(web_sources):
 # PDF Upload
 # -----------------------------
 
-uploaded_file = st.file_uploader(
-    "Upload a PDF",
-    type=["pdf"]
+uploaded_files = st.file_uploader(
+    "Upload PDFs (multiple files supported)",
+    type=["pdf"],
+    accept_multiple_files=True
 )
 
+all_chunks = []
 
-if uploaded_file is not None:
-
-    file_bytes = uploaded_file.getvalue()
-    file_hash = hashlib.sha256(file_bytes).hexdigest()
-
-    needs_reprocess = (
-        st.session_state.document_name != uploaded_file.name
-        or st.session_state.document_hash != file_hash
-    )
-
-    if needs_reprocess:
-
-        reader = PdfReader(uploaded_file)
-
-        pages = []
-
-        # Extract text page-by-page
-        for page_number, page in enumerate(
-            reader.pages,
-            start=1
-        ):
-
-            page_text = page.extract_text() or ""
-
-            pages.append({
-                "text": page_text,
-                "page": page_number,
-                "source": uploaded_file.name
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        file_bytes = uploaded_file.getvalue()
+        file_hash = hashlib.sha256(file_bytes).hexdigest()
+        
+        # Check if we already processed this file
+        existing_doc = next((doc for doc in st.session_state.documents 
+                           if doc["hash"] == file_hash), None)
+        
+        if existing_doc:
+            st.info(f"📄 {uploaded_file.name} already loaded")
+            continue
+            
+        # Process new PDF
+        with st.spinner(f"Processing {uploaded_file.name}..."):
+            reader = PdfReader(uploaded_file)
+            
+            pages = []
+            
+            # Extract text page-by-page
+            for page_number, page in enumerate(
+                reader.pages,
+                start=1
+            ):
+                page_text = page.extract_text() or ""
+                
+                pages.append({
+                    "text": page_text,
+                    "page": page_number,
+                    "source": uploaded_file.name
+                })
+            
+            chunks = chunk_pages(pages)
+            all_chunks.extend(chunks)
+            
+            # Store document info
+            st.session_state.documents.append({
+                "name": uploaded_file.name,
+                "hash": file_hash,
+                "chunks_count": len(chunks)
             })
-
-        chunks = chunk_pages(pages)
-
-        st.session_state.retriever = Retriever(chunks)
-        st.session_state.document_name = uploaded_file.name
-        st.session_state.document_hash = file_hash
-        st.session_state.messages = []
-
-        st.success(
-            f"📄 {uploaded_file.name} processed successfully!"
-        )
-
-        st.write(
-            f"Created {len(chunks)} chunks."
-        )
+            
+            st.success(f"📄 {uploaded_file.name} processed: {len(chunks)} chunks")
+    
+    # Update retriever with all chunks
+    if all_chunks:
+        st.session_state.retriever = Retriever(all_chunks)
+        st.session_state.messages = []  # Clear chat when new docs are added
+        
+        total_chunks = sum(doc["chunks_count"] for doc in st.session_state.documents)
+        st.write(f"**Total:** {total_chunks} chunks from {len(st.session_state.documents)} document(s)")
 
 
 # -----------------------------
 # Display Document Status
 # -----------------------------
 
-if st.session_state.retriever is not None:
-
-    st.info(
-        f"📚 Document ready: "
-        f"{st.session_state.document_name}"
-    )
+if st.session_state.documents:
+    st.info(f"📚 Loaded {len(st.session_state.documents)} document(s):")
+    for doc in st.session_state.documents:
+        st.write(f"  • {doc['name']} ({doc['chunks_count']} chunks)")
+    
+    total_chunks = sum(doc["chunks_count"] for doc in st.session_state.documents)
+    st.write(f"**Total chunks:** {total_chunks}")
+    
+    # Add clear documents button
+    if st.button("Clear All Documents"):
+        st.session_state.documents = []
+        st.session_state.retriever = None
+        st.session_state.messages = []
+        st.rerun()
 
 
 # -----------------------------
